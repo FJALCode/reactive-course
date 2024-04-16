@@ -1,4 +1,4 @@
-# Curso Reactive X
+# Curso ReactiveX
 
 * [¿Qué es la programación reactiva?](#qué-es-la-programación-reactiva)
 * [¿Qué es ReactiveX?](#que-es-reactive)
@@ -13,6 +13,9 @@
     * [Cold Observable vs Hot Observable](#cold-observable-vs-hot-observable)
     * [of()](#of)
     * [fromEvent()](#fromevent)
+    * [range()](#range)
+    * [interval()](#interval)
+    * [timer()](#timer)
     * [Buenas prácticas con Observables](#buenas-prácticas-con-observables)
 * [Subscribers](#subscribers)
     * [PartialObserver](#partialobserver)
@@ -254,6 +257,118 @@ src2$.subscribe(event => {
 });
 ```
 
+### range()
+La función `range()` crea un Observable que emite una secuencia de números dentro de un rango. Por default esta función es sincrona
+
+<img src="img/operator-range.png" width="auto;"/>
+
+La función `range()` posee la siguiente nomenclatura `range(start: number, count?: number, scheduler?: SchedulerLike): Observable<number>`, donde si solo se coloca un valor indicará la cantidad de emisiones iniciando en el `valor 0`.
+* **start:** El valor del primer número entero de la secuencia.
+* **count:** El número de enteros secuenciales que se generarán.
+* **scheduler:** Es un SchedulerLike que se utiliza para programar las emisiones de las notificaciones. Esto puede permitir modificar la función de sincrona a asincrona
+
+```ts
+import { asyncScheduler, range } from "rxjs";
+
+const src$ = range(3);
+const src2$ = range(5,3);
+const src3$ = range(5,3, asyncScheduler);
+
+console.log('Inicio src$');
+src$.subscribe(console.log)
+console.log('Fin src$');
+
+
+console.log('Inicio src2$');
+src2$.subscribe(console.log)
+console.log('Fin src2$');
+
+console.log('Inicio src3$');
+src3$.subscribe(console.log)
+console.log('Fin src3$');
+```
+La respuesta de este ejemplo daría
+
+<img src="img/operador-range-example.png" width="auto;"/>
+
+
+### interval()
+La función `interval()` crea un Observable que emite una secuencia de números incremental, con el intervalo de tiempo entre emisiones que se especifique. Por default esta función es asincrona
+
+<img src="img/operator-interval.png" width="auto;"/>
+
+La función `interval()` posee la siguiente nomenclatura `interval(period: number = 0, scheduler: SchedulerLike = async): Observable<number>`, 
+
+* **period:** El valor por defecto es `0`. El tamaño del intervalo en milisegundos (por defecto) o en la unidad de tiempo determinada por el reloj del planificador.
+* **scheduler:** Es un SchedulerLike, el valor por defecto es `async`. El SchedulerLike que se utiliza para planificar la emisión de valores y para proporcionar la noción del "tiempo".
+
+```ts
+import { Observer, interval } from "rxjs";
+
+const observer: Observer<number> = {
+    next: next => console.log('Next: ', next),
+    error: error => console.warn('Error: ', error),
+    complete: () => console.log('COMPLETE')
+}
+
+const interval$ = interval(1000);
+
+console.log('inicio');
+interval$.subscribe(observer)
+console.log('fin');
+```
+La respuesta de este ejemplo daría
+
+<img src="img/operador-interval-example.png" width="auto;"/>
+
+
+### timer()
+La función `timer()` crea un Observable que comienza a emitir una secuencia ascendente de números consecutivos a intervalos, tras un periodo inicial de tiempo. Por default esta función es asincrona
+
+<img src="img/operador-time.png" width="auto;"/>
+
+La función `timer()` posee la siguiente nomenclatura `timer(dueTime: number | Date = 0, periodOrScheduler?: number | SchedulerLike, scheduler?: SchedulerLike): Observable<number>`, 
+
+* **dueTime:** El valor por defecto es `0`. El valor del retraso inicial que esperar antes de emitir el primer valor, especificado como objeto Date o como Integer, en milisegundos.
+* **periodOrScheduler:** El valor por defecto es `undefined`. El periodo de tiempo entre emisiones.
+* **scheduler:** Es un SchedulerLike, El valor por defecto es `undefined`. EL SchedulerLike que utilizar para planificar las emisiones, proporcionando la noción de 'tiempo'.
+
+```ts
+import { Observer, timer } from "rxjs";
+
+const observer: Observer<number> = {
+    next: next => console.log('Next: ', next),
+    error: error => console.warn('Error: ', error),
+    complete: () => console.log('COMPLETE')
+}
+
+const timer$ = timer(2000);
+const timer2$ = timer(3000, 1000);
+
+const today = new Date();
+today.setSeconds(today.getSeconds() + 6)
+
+const timer3$ = timer(today);
+
+
+console.log('inicio timer$');
+timer$.subscribe(observer)
+console.log('fin timer$');
+
+console.log('inicio timer2$');
+timer2$.subscribe(observer)
+console.log('fin timer2$');
+
+console.log('inicio timer3$');
+timer3$.subscribe(observer)
+console.log('fin timer3$');
+```
+
+La respuesta de este ejemplo daría
+
+<img src="img/operador-timer-example.png" width="auto;"/>
+
+Como se puede apreciar en el `timer$` fue completado al pasar 2 segundos, por su parte el `timer2$` empezó a generar intervalos de tiempo a partir de los 3 segundos cada 1 seg, por último el timer3$ realizó su única ejecución a los 6 segundos y completo instantaneamente.
 
 ### Buenas prácticas con Observables
 * **Nomenclatura de variables:** Es recomendable identificar un `Observable` con una variable la cual lleve al final de la misma un simbolo de dolar, por ejemplo **`clicks$`**.
