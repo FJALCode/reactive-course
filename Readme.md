@@ -11,11 +11,13 @@
     * [observables.complete()](#observablescomplete)
     * [Subject](#subject)
     * [Cold Observable vs Hot Observable](#cold-observable-vs-hot-observable)
-    * [of()](#of)
-    * [fromEvent()](#fromevent)
-    * [range()](#range)
-    * [interval()](#interval)
-    * [timer()](#timer)
+    * [obs.of()](#obsof)
+    * [obs.from()](#obsfrom)
+    * [obs.fromEvent()](#obsfromevent)
+    * [obs.range()](#obsrange)
+    * [obs.interval()](#obsinterval)
+    * [obs.timer()](#obstimer)
+    * [asyncScheduler](#asyncscheduler)
     * [Buenas prácticas con Observables](#buenas-prácticas-con-observables)
 * [Subscribers](#subscribers)
     * [PartialObserver](#partialobserver)
@@ -58,6 +60,8 @@ import { Observable } from "rxjs";
 const obs$ = new Observable<string>();
 ```
 > **Nota**: el método `create` se encuentra deprecated desde la v7 de rxjs y sera eliminado en la v8.
+
+Un método facil de identificar cuando es un observable es que se importa directamente de rxjs `import { ... } from "rxjs";`
 
 ### Observer
 Un `Observer` o `Observador` es aquel que se subscribe a un `Observable`. Este observador reaccionará a cualquier elemento o secuencia de elementos que emita el Observable.
@@ -201,10 +205,10 @@ La respuesta por consola de este código por consola sería
 Acá podemos apreciar un buen ejemplo del `Hot Observable` ya que logramos insertar información al usando el `subsject$.next(10)` al flujo de datos que el observable `intervalo$` estaba emitiendo.
 
 
-### of()
+### obs.of()
 El operador `of()` es una función que toma como parámetro una secuencia de elementos y devuelve un observable que emite cada elemento de la secuencia tal cual como se recibió, tiene la particularidad que emite sincrónicamente los argumentos descritos y luego se completa inmediatamente.
 
-<img src="img/operador-of.png" width="auto;"/>
+<img src="img/obs-of.png" width="auto;"/>
 
 Es importante tomar en consideración que los valores enviamos deben estar separados por comas (,) a fin que detecte que son elementos diferentes. La nomenclatura usada sería `of<tipo-valor>(valor1, valor2, valor3);`
 ```ts
@@ -228,13 +232,115 @@ obs2$.subscribe({
 ```
 En el anterior ejemplo vemos como `obs$` responde con 6 diferentes elementos númericos mientras que `obs2$` nos responde un solo elemento de tipo array
 
-<img src="img/operador-of-example.png" width="auto;"/>
+<img src="img/obs-of-example.png" width="auto;"/>
+
+### obs.from()
+El operador `from()` es una función que crea un Observable a partir de una Array, Objeto, Promesa, iterable o un Observable.
+
+<img src="img/observable-from.png" width="auto;"/>
+
+La nomenclatura usada sería `from<tipo-valor>(target, eventName);`.
+```ts
+import { of, from, Observer } from "rxjs";
+
+const fromObserver: Observer<any> = {
+    next: next => console.log('fromObserver Next: ', next), 
+    error: error => console.warn('Error: ', error), 
+    complete: () => console.log('fromObserver COMPLETE')
+}
+
+const source$ = from([1,2,3,4,5]);
+
+source$.subscribe(fromObserver);
+```
+La respuesta de este código sería
+
+<img src="img/obs-from-example.png" width="auto;"/>
+
+El observable `from` y el `of` generan distintas respuestas al pasarles un argumento como un string
+```ts
+import { of, from, Observer } from "rxjs";
+
+const fromObserver: Observer<any> = {
+    next: next => console.log('fromObserver Next: ', next), 
+    error: error => console.warn('Error: ', error), 
+    complete: () => console.log('fromObserver COMPLETE')
+}
+
+const ofObserver: Observer<any> = {
+    next: next => console.log('ofObserver Next: ', next), 
+    error: error => console.warn('Error: ', error), 
+    complete: () => console.log('ofObserver COMPLETE')
+}
+
+const source2$ = from('Fernando');
+const source3$ = of('Fernando');
+
+source2$.subscribe(fromObserver);
+source3$.subscribe(ofObserver);
+```
+Por consola veríamos esta respuesta
+
+<img src="img/obs-from-of-example.png" width="auto;"/>
+
+El `from()` también permite trabajar con promesas
+
+```ts
+import { of, from, Observer } from "rxjs";
+
+const observer: Observer<any> = {
+    next: next => console.log('fromObserver Next: ', next), 
+    error: error => console.warn('Error: ', error), 
+    complete: () => console.log('fromObserver COMPLETE')
+}
+
+const source2$ = from(fetch("https://api.github.com/users/klerith"));
+
+source2$.subscribe( async(res) => {
+    const data = await res.json()
+    console.log(data);
+})
+
+source2$.subscribe(observer)
+```
+En este caso usamos una petición `fetch` propia de JS para realizar la promesa la cual nos trae la siguiente respuesta
+
+<img src="img/obs-from-example-2.png" width="auto;"/>
+
+El observable `from()`, nos permitirá recorrer iterables similar a un bucle for aunque se diferencia de este ya que en vista que la respuesta es un observable se podra usar distintos Operadores para poder adaptar el response resultante
+
+```ts
+import { of, from, Observer } from "rxjs";
+
+const observer: Observer<any> = {
+    next: next => console.log('fromObserver Next: ', next),
+    error: error => console.warn('Error: ', error),
+    complete: () => console.log('fromObserver COMPLETE')
+}
+
+const miGenerador = function* () {
+    yield 1;
+    yield 2;
+    yield 3;
+    yield 4;
+    yield 5;
+}
+
+const miIterable = miGenerador();
+
+for (let id of miIterable) {
+    console.log(id);
+}
+
+from(miIterable).subscribe(observer);
+```
 
 
-### fromEvent()
+
+### obs.fromEvent()
 El operador `fromEvent()` es una función que crea un Observable que emite eventos de un tipo específico, originados en el *event target* proporcionado. Un *event target* es un objeto con métodos para registrar las funciones de manejo de eventos.
 
-<img src="img/operator-from-event.png" width="auto;"/>
+<img src="img/obs-from-event.png" width="auto;"/>
 
 Un ejemplo del uso del `fromEvent` es cuando deseamos escuchar eventos propios del DOM, en este caso escucharemos los eventos del `click` y del `keyup`.
 La nomenclatura usada sería `fromEvent<tipo-valor>(target, eventName);`
@@ -257,10 +363,10 @@ src2$.subscribe(event => {
 });
 ```
 
-### range()
+### obs.range()
 La función `range()` crea un Observable que emite una secuencia de números dentro de un rango. Por default esta función es sincrona
 
-<img src="img/operator-range.png" width="auto;"/>
+<img src="img/obs-range.png" width="auto;"/>
 
 La función `range()` posee la siguiente nomenclatura `range(start: number, count?: number, scheduler?: SchedulerLike): Observable<number>`, donde si solo se coloca un valor indicará la cantidad de emisiones iniciando en el `valor 0`.
 * **start:** El valor del primer número entero de la secuencia.
@@ -289,13 +395,13 @@ console.log('Fin src3$');
 ```
 La respuesta de este ejemplo daría
 
-<img src="img/operador-range-example.png" width="auto;"/>
+<img src="img/obs-range-example.png" width="auto;"/>
 
 
-### interval()
+### obs.interval()
 La función `interval()` crea un Observable que emite una secuencia de números incremental, con el intervalo de tiempo entre emisiones que se especifique. Por default esta función es asincrona
 
-<img src="img/operator-interval.png" width="auto;"/>
+<img src="img/obs-interval.png" width="auto;"/>
 
 La función `interval()` posee la siguiente nomenclatura `interval(period: number = 0, scheduler: SchedulerLike = async): Observable<number>`, 
 
@@ -319,13 +425,13 @@ console.log('fin');
 ```
 La respuesta de este ejemplo daría
 
-<img src="img/operador-interval-example.png" width="auto;"/>
+<img src="img/obs-interval-example.png" width="auto;"/>
 
 
-### timer()
+### obs.timer()
 La función `timer()` crea un Observable que comienza a emitir una secuencia ascendente de números consecutivos a intervalos, tras un periodo inicial de tiempo. Por default esta función es asincrona
 
-<img src="img/operador-time.png" width="auto;"/>
+<img src="img/obs-time.png" width="auto;"/>
 
 La función `timer()` posee la siguiente nomenclatura `timer(dueTime: number | Date = 0, periodOrScheduler?: number | SchedulerLike, scheduler?: SchedulerLike): Observable<number>`, 
 
@@ -366,9 +472,45 @@ console.log('fin timer3$');
 
 La respuesta de este ejemplo daría
 
-<img src="img/operador-timer-example.png" width="auto;"/>
+<img src="img/obs-timer-example.png" width="auto;"/>
 
 Como se puede apreciar en el `timer$` fue completado al pasar 2 segundos, por su parte el `timer2$` empezó a generar intervalos de tiempo a partir de los 3 segundos cada 1 seg, por último el timer3$ realizó su única ejecución a los 6 segundos y completo instantaneamente.
+
+
+### asyncScheduler
+La propiedad `asyncScheduler` es un `Scheduler` los cuales son basicamente un programador que controla cuándo comienza una suscripción y cuándo se entregan las notificaciones, aunque en este caso al ser `async` las programa de forma asincrónica. El `asyncScheduler` permite programar la tarea como si usara `setTimeout (tarea, duración)`, aunque también tiene la capacidad de trabajar como  un `setInterval(tarea, duración)`. El `asyncScheduler` NO crea un observable, sino que crea un `Subscribers` (Suscripción). La nomenclatura del `asyncScheduler.schedule(tarea, tiempo, estado?);`
+
+```ts
+import { asyncScheduler } from "rxjs";
+setTimeout(() => { }, 1000);
+
+const saludar = () => console.log('Hola Mundo');
+const saludar2 = nombre => console.log(`Hola Mundo ${nombre}`);
+
+asyncScheduler.schedule(saludar, 2000)
+asyncScheduler.schedule(saludar2, 2000, 'Fernando')
+
+```
+
+Para crear un intervalo es basta con hacer cambiar el estado del `schedule`, en este caso usaremos `this.schedule(state + 1, 1000)` el cual cambiará el estado cada 1 seg. Es importante recordar que el `asyncScheduler` es una suscripción por lo que para cancelar la misma se debe cancelar la misma.
+
+
+```ts
+import { asyncScheduler } from "rxjs";
+setInterval(() => { }, 1000)
+
+const sub = asyncScheduler.schedule(function (state) {
+    console.log('state', state);    
+    this.schedule(state + 1, 1000);
+},3000, 0)
+
+setTimeout(() => {
+    sub.unsubscribe();
+}, 6000);
+
+```
+
+
 
 ### Buenas prácticas con Observables
 * **Nomenclatura de variables:** Es recomendable identificar un `Observable` con una variable la cual lleve al final de la misma un simbolo de dolar, por ejemplo **`clicks$`**.
