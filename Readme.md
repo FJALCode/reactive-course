@@ -24,6 +24,7 @@
 * [Subscribers](#subscribers)
     * [Tipos de Scheduler](#tipos-de-scheduler)
 * [Operators](#operators)  
+    * [Encadenar operadores](#encadenar-operadores)
     * [pipe()](#pipe)
     * [op.map()](#opmap)
     * [op.pluck()](#oppluck)
@@ -32,6 +33,7 @@
     * [op.tap()](#optap)
     * [op.reduce()](#opreduce)
     * [op.scan()](#opscan)
+    
 
 
 ## ¿Qué es la programación reactiva?
@@ -242,7 +244,7 @@ En el anterior ejemplo vemos como `obs$` responde con 6 diferentes elementos nú
 ### obs.from()
 El operador `from()` es una función que crea un Observable a partir de una Array, Objeto, Promesa, iterable o un Observable.
 
-<img src="img/observable-from.png" width="auto;"/>
+<img src="img/obs-from.png" width="auto;"/>
 
 La nomenclatura usada sería `from<tipo-valor>(target, eventName);`.
 ```ts
@@ -852,6 +854,42 @@ Los operadores son funciones que construyen sobre la fundación de los observabl
 
 > Nota: Similar a los Observables, para poder identificar si una propiedad es un operador basta ver su importacion ya que ellas vienen de `import {  } from "rxjs/operators"`
 
+Los operadores se pueden encadenar para ello basta con separarlos con una coma aunque es importante saber que los mismos se ejecutaran en cascada
+
+```ts
+import { from } from "rxjs";
+import { filter, map } from "rxjs/operators";
+
+interface Personaje {
+    tipo: string;
+    nombre: string;
+}
+
+const personajes: Personaje[] = [
+    {
+        tipo: 'heroe',
+        nombre: 'Batman'
+    },
+    {
+        tipo: 'heroe',
+        nombre: 'Robin'
+    },
+    {
+        tipo: 'villano',
+        nombre: 'Joker'
+    }
+]
+
+const personajes$ = from(personajes).
+    pipe(
+        filter(val => val.tipo === "heroe"),
+        map(name => name.nombre)
+    )
+
+personajes$.subscribe(console.log)
+```
+
+
 ### pipe()
 La función `pipe()` permite enlazar más de un operador. Los Pipes te permiten combinar múltiples funciones en una sola. La función `pipe()` tiene como argumentos las funciones que quieres que combine y regresa una nueva función que, una vez ejecutada, corre las funciones en una sequencia.
 
@@ -1113,7 +1151,204 @@ key$
 
 
 ### op.tap()
+El operador `tap()` Lleva a cabo un efecto colateral en cada emisión del Observable fuente, pero retorna un Observable que es idéntico a la fuente.
+Este operador es muy útil para depurar Observables (ver si el valor emitido es correcto) o para llevar a cabo cualquier tipo de efecto colateral.
+
+<img src="img/op-tap.png" width="auto;"/>
+
+>Nota: este operador es diferente al subscribe del Observable. Si no se realiza una suscripción al Observable retornado por tap, los efectos colaterales que se hayan especificado no ocurrirán nunca. Por tanto, tap se limita a espiar a la ejecución existente, en lugar de disparar una ejecución como hace subscribe.
+
+La nomenclatura del operador sería `tap<T>(nextOrObserver?: NextObserver<T> | ErrorObserver<T> | CompletionObserver<T> | ((x: T) => void), error?: (e: any) => void, complete?: () => void): MonoTypeOperatorFunction<T>` donde
+
+* **nextOrObserver:** Un objeto Observador normal o una función *callback* para next. El valor por defecto es undefined.
+* **error:** El valor por defecto es undefined. Función *callback* para los errores de la fuente.
+* **complete:**  El valor por defecto es undefined. Callback for the completion of the source.
+* **thisArg:** Un argumento opcional para determinar el valor del this en la función predicate. por defecto es `undefined`
+* **MonoTypeOperatorFunction<T>:** Un Observable idéntico a la fuente, pero ejecuta el Observador o la/las callbacks en cada emisión..
+
+Su firma sería `tap(next: null, error: null, complete: () => void): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo de este operador sería hacer un console.log para ver el antes y el después de una operación map
+
+```ts
+import { of } from "rxjs";
+import { map, tap } from "rxjs/operators";
+
+const fruit$ = of("Cereza", "Fresa", "Arándano");
+
+fruit$
+  .pipe(
+    tap((fruit) => console.log(`Antes: ${fruit}`)),
+    map((fruit) => fruit.toUpperCase()),
+    tap((fruit) => console.log(`Después: ${fruit}`))
+  )
+  .subscribe();
+
+/* Salida:
+Antes: Cereza, Después: CEREZA,
+Antes: Fresa, Después: FRESA,
+Antes: Arándano, Después: ARÁNDANO
+*/
+```
+
+Otro ejemplo pudiese ser actualizar una variable externa con la respuesta de una petición
+
+```ts
+import { tap, map, concatMap } from "rxjs/operators";
+import { of } from "rxjs";
+import { ajax } from "rxjs/ajax";
+
+const pokemonId$ = of(3, 5, 6);
+let pokedex = [];
+
+function getPokemonName(id: number) {
+  return ajax.getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`).pipe(
+    tap((pokemonData) => (pokedex = [...pokedex, pokemonData])),
+    map(({ name }) => name)
+  );
+}
+
+pokemonId$.pipe(concatMap((id) => getPokemonName(id))).subscribe(console.log, console.error, () => {
+    console.log(pokedex));
+// Output: venusaur, charmeleon, charizard, [{}, {}, {}]
+```
+
+También se pudiese proyectar cada click a su posición clientX, después de hacer un console.log del evento click completo
+
+```ts
+import { fromEvent } from "rxjs";
+import { tap, map } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const positions = clicks.pipe(
+  tap((ev) => console.log(ev)),
+  map((ev) => ev.clientX)
+);
+positions.subscribe((x) => console.log(x));
+```
 
 ### op.reduce()
+El operador `reduce()` Aplica una función acumuladora al Observable fuente y retorna el resultado acumulado una vez se completa la fuente
+
+<img src="img/op-reduce.png" width="auto;"/>
+
+La nomenclatura del operador sería `reduce<T, R>(accumulator: (acc: T | R, value: T, index?: number) => T | R, seed?: T | R): OperatorFunction<T, T | R>` donde
+
+* **accumulator:** La función acumuladora que se llama por cada valor de la fuente.
+* **seed:** . El valor de acumulación inicial. El valor por defecto es undefined
+* **OperatorFunction<T, T | R>:** Un Observable que emite un solo valor, resutante de haber acumulado los valores emitidos por el Observable fuente.
+
+Su firma sería `reduce(accumulator: (acc: R, value: T, index: number) => R, seed: R): OperatorFunction<T, R>`
+
+Un buen ejemplo sería contar el número de eventos click que ocurran en 5 segundos
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { reduce, takeUntil, mapTo } from "rxjs/operators";
+
+const clicksInFiveSeconds = fromEvent(document, "click").pipe(
+  takeUntil(interval(5000))
+);
+const ones = clicksInFiveSeconds.pipe(mapTo(1));
+const seed = 0;
+const count = ones.pipe(reduce((acc, one) => acc + one, seed));
+count.subscribe((x) => console.log(x));
+```
+
+El `reduce()` en RXJS es equiparable al de JS
+
+```ts
+const totalReducer = (acumulador: number, valorActual: number) => {
+    return acumulador + valorActual;
+}
+
+const total = numbers.reduce(totalReducer, 0)
+
+console.log(total);
+
+// Es Equiparable a
+
+interval(500).pipe(
+    take(6),
+    tap(console.log),
+    reduce(totalReducer)
+).subscribe({
+    next: val => console.log('next', val),
+    complete: () => console.log('Complete')
+})
+```
 
 ### op.scan()
+
+El operador `scan()` Aplica una función acumuladora a los valores del Observable fuente y retorna cada resultado inmediato
+
+<img src="img/op-scan.png" width="auto;"/>
+
+Combina todos los valores emitidos por la fuente, mediante una función de acumulación. Es similar al operador reduce, pero emite cada valor acumulado.
+
+Retorna un Observable que aplica una función de acumulación a cada elemento emitido por el Observable fuente. Si se proporciona un valor seed, ese valor se utilizará como el valor inicial del acumulador. Si no se proporciona ningún valor inicial, se utilizará el primer elemento emitido por la fuente en su lugar.
+
+La nomenclatura del operador sería `scan<T, R>(accumulator: (acc: R, value: T, index: number) => R, seed?: T | R): OperatorFunction<T, R>` donde
+
+* **accumulator:** La función de acumulación que se aplica a cada valor emitido.
+* **seed:**  El valor de acumulación inicial. El valor por defecto es undefined.
+
+
+Su firma sería `scan(accumulator: (acc: R, value: T, index: number) => R, seed: R): OperatorFunction<T, R>`
+
+Un buen ejemplo es sumar una secuencia de números
+
+```ts
+import { scan } from "rxjs/operators";
+import { range } from "rxjs";
+
+const number$ = range(1, 10);
+
+number$.pipe(scan((acc, val) => acc + val)).subscribe(console.log);
+// Salida: 1, 3, 6, 10, 15, 21, 28, 36, 45, 55
+```
+
+Otro ejemplo pudiese ser sumar una secuencia de números proporcionando un valor inicial
+
+```ts
+import { scan } from "rxjs/operators";
+import { range } from "rxjs";
+
+const number$ = range(1, 10);
+
+number$.pipe(scan((acc, val) => acc + val, 10)).subscribe(console.log);
+// Salida: 11, 13, 16, 20, 25, 31, 38, 46, 55, 65
+```
+
+También se pudiese concatenar una secuencia de cadenas
+
+```ts
+import { scan } from "rxjs/operators";
+import { from } from "rxjs";
+
+const letter$ = from(["R", "x", "J", "S", " ", "m", "o", "l", "a"]);
+
+letter$.pipe(scan((acc, val) => acc + val)).subscribe(console.log);
+/*Salida: R
+          Rx
+          RxJ
+          RxJS
+          RxJS 
+          RxJS m
+          RxJS mo
+          RxJS mol 
+          RxJS mola
+*/
+```
+O contar el número de eventos click
+
+```ts
+import { fromEvent } from "rxjs";
+import { scan, mapTo } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const ones = clicks.pipe(mapTo(1));
+const seed = 0;
+const count = ones.pipe(scan((acc, one) => acc + one, seed));
+count.subscribe((x) => console.log(x));
+```
