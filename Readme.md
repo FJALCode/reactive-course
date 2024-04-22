@@ -10,12 +10,12 @@
     * [observables.complete()](#observablescomplete)
     * [Subject](#subject)
     * [Cold Observable vs Hot Observable](#cold-observable-vs-hot-observable)
-    * [obs.of()](#obsof)
-    * [obs.from()](#obsfrom)
-    * [obs.fromEvent()](#obsfromevent)
-    * [obs.range()](#obsrange)
-    * [obs.interval()](#obsinterval)
-    * [obs.timer()](#obstimer)
+    * [of()](#of)
+    * [from()](#from)
+    * [fromEvent()](#fromevent)
+    * [range()](#range)
+    * [interval()](#interval)
+    * [timer()](#timer)
     * [Buenas prácticas con Observables](#buenas-prácticas-con-observables)
 * [Observer](#observer)
 * [Scheduler](#scheduler)
@@ -26,13 +26,21 @@
 * [Operators](#operators)  
     * [Encadenar operadores](#encadenar-operadores)
     * [pipe()](#pipe)
-    * [op.map()](#opmap)
-    * [op.pluck()](#oppluck)
-    * [op.mapTo()](#opmapto)
-    * [op.filter()](#opfilter)
-    * [op.tap()](#optap)
-    * [op.reduce()](#opreduce)
-    * [op.scan()](#opscan)
+    * [map()](#map)
+    * [pluck()](#pluck)
+    * [mapTo()](#mapto)
+    * [filter()](#filter)
+    * [tap()](#tap)
+    * [reduce()](#reduce)
+    * [scan()](#scan)
+    * [first()](#first)
+    * [take()](#take)
+    * [takeWhile()](#takewhile)
+    * [takeUntil()](#takeuntil)
+    * [skip()](#skip)
+    * [distinct()](#distinct)
+    * [distinctUntilChanged()](#distinctuntilchanged)
+    * [distinctUntilKeyChanged()](#distinctuntilkeychanged)
     
 
 
@@ -212,7 +220,7 @@ La respuesta por consola de este código por consola sería
 Acá podemos apreciar un buen ejemplo del `Hot Observable` ya que logramos insertar información al usando el `subsject$.next(10)` al flujo de datos que el observable `intervalo$` estaba emitiendo.
 
 
-### obs.of()
+### of()
 El operador `of()` es una función que toma como parámetro una secuencia de elementos y devuelve un observable que emite cada elemento de la secuencia tal cual como se recibió, tiene la particularidad que emite sincrónicamente los argumentos descritos y luego se completa inmediatamente.
 
 <img src="img/obs-of.png" width="auto;"/>
@@ -241,7 +249,7 @@ En el anterior ejemplo vemos como `obs$` responde con 6 diferentes elementos nú
 
 <img src="img/obs-of-example.png" width="auto;"/>
 
-### obs.from()
+### from()
 El operador `from()` es una función que crea un Observable a partir de una Array, Objeto, Promesa, iterable o un Observable.
 
 <img src="img/obs-from.png" width="auto;"/>
@@ -344,7 +352,7 @@ from(miIterable).subscribe(observer);
 
 
 
-### obs.fromEvent()
+### fromEvent()
 El operador `fromEvent()` es una función que crea un Observable que emite eventos de un tipo específico, originados en el *event target* proporcionado. Un *event target* es un objeto con métodos para registrar las funciones de manejo de eventos.
 
 <img src="img/obs-from-event.png" width="auto;"/>
@@ -370,7 +378,7 @@ src2$.subscribe(event => {
 });
 ```
 
-### obs.range()
+### range()
 La función `range()` crea un Observable que emite una secuencia de números dentro de un rango. Por default esta función es sincrona
 
 <img src="img/obs-range.png" width="auto;"/>
@@ -405,7 +413,7 @@ La respuesta de este ejemplo daría
 <img src="img/obs-range-example.png" width="auto;"/>
 
 
-### obs.interval()
+### interval()
 La función `interval()` crea un Observable que emite una secuencia de números incremental, con el intervalo de tiempo entre emisiones que se especifique. Por default esta función es asincrona
 
 <img src="img/obs-interval.png" width="auto;"/>
@@ -435,7 +443,7 @@ La respuesta de este ejemplo daría
 <img src="img/obs-interval-example.png" width="auto;"/>
 
 
-### obs.timer()
+### timer()
 La función `timer()` crea un Observable que comienza a emitir una secuencia ascendente de números consecutivos a intervalos, tras un periodo inicial de tiempo. Por default esta función es asincrona
 
 <img src="img/obs-time.png" width="auto;"/>
@@ -927,7 +935,7 @@ squareOdd.subscribe(x => console.log(x));
 ```
 
 
-### op.map()
+### map()
 El operador `map()` nos permite transformar o extraer lo que emite el observable en algo diferente, manteniendo la estructura del flujo original.
 
 <img src="img/op-map.png" width="auto;"/>
@@ -981,7 +989,7 @@ keyup$.pipe(
 ```
 
 
-### op.pluck()
+### pluck()
 
 El operador `pluck()` nos permite extrae propiedadas de un objeto. ~~Propiedad actualmente en desuso~~. Se reemplaza por el operador `map()`. Ejemplo al final.
 
@@ -1049,7 +1057,7 @@ const keyupPluck$ = keyup$.pipe(
 );
 ```
 
-### op.mapTo()
+### mapTo()
 
 El operador `mapTo()` nos permite emitir el mismo valor cada vez que el Observable fuente emite un valor. ~~Propiedad actualmente en desuso~~. Se reemplaza por el operador `map()`. Ejemplo al final.
 
@@ -1110,7 +1118,7 @@ keyup$.pipe(
 ).subscribe(console.log)
 ```
 
-### op.filter()
+### filter()
 El operador `filter()` filtrar los elementos emitidos por el Observable, emitiendo únicamente aquellos que cumplan una condición. Al igual que un `Array.filter()`, solo emitirá un valor si cumple una condición determinada.
 
 <img src="img/op-filter.png" width="auto;"/>
@@ -1150,7 +1158,7 @@ key$
 ```
 
 
-### op.tap()
+### tap()
 El operador `tap()` Lleva a cabo un efecto colateral en cada emisión del Observable fuente, pero retorna un Observable que es idéntico a la fuente.
 Este operador es muy útil para depurar Observables (ver si el valor emitido es correcto) o para llevar a cabo cualquier tipo de efecto colateral.
 
@@ -1227,7 +1235,7 @@ const positions = clicks.pipe(
 positions.subscribe((x) => console.log(x));
 ```
 
-### op.reduce()
+### reduce()
 El operador `reduce()` Aplica una función acumuladora al Observable fuente y retorna el resultado acumulado una vez se completa la fuente
 
 <img src="img/op-reduce.png" width="auto;"/>
@@ -1278,7 +1286,7 @@ interval(500).pipe(
 })
 ```
 
-### op.scan()
+### scan()
 
 El operador `scan()` Aplica una función acumuladora a los valores del Observable fuente y retorna cada resultado inmediato
 
@@ -1351,4 +1359,774 @@ const ones = clicks.pipe(mapTo(1));
 const seed = 0;
 const count = ones.pipe(scan((acc, one) => acc + one, seed));
 count.subscribe((x) => console.log(x));
+```
+
+### first()
+El operador `first()` Emite el primer valor (o el primer valor que cumpla una condición) emitido por el Observable fuente
+
+<img src="img/op-first.png" width="auto;"/>
+
+`first()` Emite únicamente el primer valor. O emite el primer valor que cumpla alguna condición. Si se llama sin ningún argumento, `first()` emite el primer valor del Observable fuente y se completa. Si se llama con una función `predicate`, first emite el valor de la fuente que cumpla la condición especificada. También puede recibir un valor por defecto, que se emite en el caso de que la fuente se complete sin emitir ningún elemento válido. Lanza un error en el caso de que no se encuentre un elemento válido y no se haya proporcionado un defaultValue .
+
+La nomenclatura del operador sería `first<T, D>(predicate?: (value: T, index: number, source: Observable<T>) => boolean, defaultValue?: D): OperatorFunction<T, T | D>` donde
+
+* **predicate:** Una función opcional que aplicar a cada elemento para comprobar si cumple o no una condición.
+* **defaultValue<T>:**  El valor por defecto que se emitirá en el caso de que no se encuentre ningún elemento válido.
+* **OperatorFunction<T, T | D>:**  Un Observable del primer elemento que cumpla la condición especificada.
+
+
+Su firma sería `scan(accumulator: (acc: R, value: T, index: number) => R, seed: R): OperatorFunction<T, R>`
+
+Un buen ejemplo sería emitir la primera cadena de una secuencia
+
+```ts
+import { first } from "rxjs/operators";
+import { from, fromEvent } from "rxjs";
+
+const fruit$ = from(["Cereza", "Fresa", "Arándano"]);
+
+fruit$.pipe(first()).subscribe(console.log);
+// Salida: Cereza
+```
+
+Otro ejemplo pudiese ser emitir la primera tecla pulsada
+
+```ts
+import { first, map } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const keyPressed$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+keyPressed$
+  .pipe(
+    first(),
+    map(({ code }) => code)
+  )
+  .subscribe(console.log);
+// Salida: KeyX
+```
+
+También se pudiese emitir el primer elemento que cumpla una condición
+
+```ts
+import { of } from "rxjs";
+import { first } from "rxjs/operators";
+
+const user$ = of(
+  { name: "NyaGarcía", age: 23 },
+  { name: "zaldih", age: 21 },
+  { name: "caballerog", age: 35 }
+);
+
+user$.pipe(first(({ age }) => age === 21)).subscribe(console.log);
+// Salida: { name: 'zaldih', age: 21 }
+```
+También se pudiese eroporcionar un valor por defecto, que será emitido si ningún elemento cumple la condición
+
+```ts
+import { first } from "rxjs/operators";
+import { from } from "rxjs";
+
+const language$ = from([
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Rust", type: "Multiparadigma" },
+]);
+
+language$
+  .pipe(
+    first(({ type }) => type === "Orientado a objetos", {
+      name: "Java",
+      type: "Orientado a objetos",
+    })
+  )
+  .subscribe(console.log);
+// Salida: { name: "Java", type: "Orientado a objetos" }
+```
+
+Emitir solo el primer click que ocurra en el DOM
+
+```ts
+import { fromEvent } from "rxjs";
+import { first } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(first());
+result.subscribe((x) => console.log(x));
+```
+
+Emitir el primer click que ocurra en un DIV
+```ts
+import { fromEvent } from "rxjs";
+import { first } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(first((ev) => ev.target.tagName === "DIV"));
+result.subscribe((x) => console.log(x));
+```
+
+### take()
+El operador `take()` Emite las primeras x emisiones del Observable fuente
+
+<img src="img/op-take.png" width="auto;"/>
+
+`take()` retorna un Observable que emite únicamente los primeros count valores emitidos por el Observable fuente. Si la fuente emite menos de n valores, entonces se emiten todos los valores. Después, se completa el Observable, independientemente de si la fuente se completa o no.
+
+La nomenclatura del operador sería `take<T>(count: number): MonoTypeOperatorFunction<T>` donde
+
+* **count:** El máximo número de valores que se emitirán.
+* **MonoTypeOperatorFunction<T>:**  Un Observable que emite o las primeras `count` emisiones del Observable fuente, o todas las emisiones si el Observable fuente emite menos de count valores.
+
+
+Su firma sería `scan(accumulator: (acc: R, value: T, index: number) => R, seed: R): OperatorFunction<T, R>`
+
+Un buen ejemplo sería emitir las primeras 5 teclas pulsadas
+
+```ts
+import { map, take } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+key$
+  .pipe(
+    map(({ code }) => code),
+    take(5)
+  )
+  .subscribe(console.log);
+// Salida: KeyR, KeyX, KeyJ, KeyS, Space
+```
+
+Otro ejemplo pudiese ser emitir los primeros 3 títulos de películas de Studio Ghibli
+
+```ts
+import { ajax } from "rxjs/ajax";
+import { map, mergeAll, take } from "rxjs/operators";
+
+const ghibliFilm$ = ajax.getJSON("https://ghibliapi.herokuapp.com/films").pipe(
+  mergeAll(),
+  map(({ title }) => title)
+);
+
+ghibliFilm$.pipe(take(5)).subscribe(console.log);
+// Salida: Castle in the Sky, Grave of the Fireflies, My Neighbor Totoro
+```
+
+También se pudiese concatenar una secuencia de cadenas
+
+```ts
+import { scan } from "rxjs/operators";
+import { from } from "rxjs";
+
+const letter$ = from(["R", "x", "J", "S", " ", "m", "o", "l", "a"]);
+
+letter$.pipe(scan((acc, val) => acc + val)).subscribe(console.log);
+/*Salida: R
+          Rx
+          RxJ
+          RxJS
+          RxJS 
+          RxJS m
+          RxJS mo
+          RxJS mol 
+          RxJS mola
+*/
+```
+También se pudiesebtener los 5 primeros segundos de un Observable infinito de un intervalo de 1 segundo.
+
+```ts
+import { interval } from "rxjs";
+import { take } from "rxjs/operators";
+
+const intervalCount = interval(1000);
+const takeFive = intervalCount.pipe(take(5));
+takeFive.subscribe((x) => console.log(x));
+
+// Salida: 0, 1, 2, 3, 4
+```
+
+### takeWhile()
+
+El operador `takeWhile()` Emite las emisiones del Observable fuente siempre y hasta cuando cumplan la condición especificada. 
+
+<img src="img/op-takeWhile.png" width="auto;"/>
+
+`takeWhile()` Emite los valores del Observable fuente mientras cumplan la condición especificada. En cuanto un valor no la cumpla, se completa. Se completa en cuanto haya un valor que no cumpla la condición. `takeWhile()` se suscribe al Observable fuente y comienza a reflejarlo. Cada valor que se emita en la fuente, se proporciona a la función `predicate`, que retorna un valor booleano. Este valor indica si el valor cumple o no la condición especificada. El Observable resultante emite los valores del Observable fuente hasta que la condición deje de cumplirse. En ese momento, `takeWhile` deja de emitir los valores del Observable fuente y hace que el Observable resultante se complete.
+
+La nomenclatura del operador sería `takeWhile<T>(predicate: (value: T, index: number) => boolean, inclusive: boolean = false): MonoTypeOperatorFunction<T>` donde
+
+* **predicate:** Una función que evalúa cada valor emitido por el Observable fuente y retorna un booleano. Recibe un índice (de base cero) como segundo argumento.
+* **inclusive:** Cuando valga true, el primer valor que incumpla la condición también se emitirá. El valor por defecto es `false`.
+* **MonoTypeOperatorFunction<T>:**  Un Observable que emite los valores del Observable fuente siempre y cuando cada valor cumpla la condición especificada.
+
+
+Su firma sería `takeWhile(predicate: (value: T, index: number) => boolean, inclusive?: boolean): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir números mientras sean menores que 10
+
+```ts
+import { takeWhile } from "rxjs/operators";
+import { interval } from "rxjs";
+
+const number$ = interval(1000);
+
+number$
+  .pipe(takeWhile((number) => number < 10))
+  .subscribe(console.log, console.error, () => console.log("Completado"));
+// Salida: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, Completado
+```
+
+Otro ejemplo pudiese ser Emitir las teclas pulsadas mientras no se pulse la tecla x
+
+```ts
+import { map, takeWhile } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+key$
+  .pipe(
+    takeWhile(({ code }) => code !== "KeyX"),
+    map(({ code }) => code)
+  )
+  .subscribe(console.log, console.error, () => console.log("Completado"));
+// Salida: KeyP, KeyC, KeyM (Pulsar KeyX), Completado
+```
+
+También se pudiese emitir lenguajes mientras sean de tipo Multiparadigma
+
+```ts
+import { from } from "rxjs";
+import { takeWhile } from "rxjs/operators";
+
+const language$ = from([
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Rust", type: "Multiparadigma" },
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Scala", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+]);
+
+language$
+  .pipe(takeWhile(({ type }) => type === "Multiparadigma"))
+  .subscribe(console.log);
+// Salida: { name: "Ruby", type: "Multiparadigma" }, { name: "Rust", type: "Multiparadigma" }
+```
+Si se proporciona el valor true como segundo argumento (parámetro inclusive), el primer elemento que no cumpla la condición también se emite
+
+```ts
+import { interval } from "rxjs";
+import { from } from "rxjs";
+import { takeWhile } from "rxjs/operators";
+
+const programmingLanguage$ = from([
+  { name: "Simula", type: "Object-oriented" },
+  { name: "Java", type: "Object-oriented" },
+  { name: "Wolfram", type: "Declarative" },
+  { name: "Ruby", type: "Multiparadigm" },
+]);
+
+// Si se proporciona el valor true como segundo argumento (parámetro inclusive), el primer elemento que no cumpla la condición también se emite
+programmingLanguage$
+  .pipe(takeWhile(({ type }) => type === "Object-oriented", true))
+  .subscribe(console.log);
+// Salida: { name: "Simula", type: "Object-oriented" }, { name: "Java", type: "Object-oriented" }, { name: "Wolfram", type: "Declarative" }
+```
+
+Emite los eventos click mientras su propiedad clientX sea mayor a 200
+
+```ts
+import { fromEvent } from "rxjs";
+import { takeWhile } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(takeWhile((ev) => ev.clientX > 200));
+result.subscribe((x) => console.log(x));
+```
+
+
+### takeUntil()
+
+El operador `takeUntil()` Emite los valores emitidos por el Observable fuente hasta que un segundo Observable emita un valor
+
+<img src="img/op-takeUntil.png" width="auto;"/>
+
+`takeUntil()` Emite valores hasta que un segundo Observable, el notificador, emita un valor. Entonces, se completa. takeUntil se suscribe y comienza a reflejar el Observable fuente. También se encarga de monitorizar un segundo Observable, el notificador que se haya proporcionado. Si el notificador emite un valor, el Observable resultante deja de emitir los valores del Observable fuente y se completa.
+
+Si el notificador no emite ningún valor y se completa, takeUntil emitirá todos los valores.
+
+La nomenclatura del operador sería `takeUntil<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>` donde
+
+* **notifier:** El Observable cuya primera emisión hará que el Observable resultante deje de emitir los valores del Observable fuente.
+
+
+Su firma sería `takeUntil<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir valores hasta que timer$ emita a los 4 segundos
+
+```ts
+import { takeUntil } from "rxjs/operators";
+import { interval, timer } from "rxjs";
+
+const number$ = interval(1000);
+const timer$ = timer(4000);
+
+number$.pipe(takeUntil(timer$)).subscribe(console.log);
+// Salida: 0, 1, 2
+```
+
+Otro ejemplo pudiese ser Emitir valores hasta que se pulse una tecla
+
+```ts
+import { takeUntil } from "rxjs/operators";
+import { interval, fromEvent } from "rxjs";
+
+const number$ = interval(1000);
+const key$ = fromEvent(document, "keydown");
+
+number$.pipe(takeUntil(key$)).subscribe(console.log);
+// Salida: O, 1, 2, 3, 4 (Pulsar tecla)
+```
+
+También se pudiese Cancelar la ejecución de un Observable con un Sujeto y takeUntil.
+
+Una técnica muy útil para poder cancelar la ejecución de uno o varios Observables es utilizar un Sujeto junto al operador `takeUntil`. De esta manera, no hay que cancelar la suscripción manualmente a todos los Observables que se crean. A continuación, una demostración de esta técnica:
+
+Para cancelar la suscripción a un Observable, se debe almacenar la suscripción a dicho Observable, y llamar al método `unsubscribe`. Esto implica que por cada Observable que se cree, se debe almacenar una Suscripción. Esta forma de cancelar suscripciones es tediosa e imposible de mantener a medida que una aplicación escala.
+
+```ts
+import { interval, timer } from "rxjs";
+import { tap } from "rxjs/operators";
+
+const number$ = interval(1000);
+
+const number$Subscription = number$.subscribe(console.log);
+
+number$Subscription.unsubscribe();
+```
+
+Sin embargo, al utilizar el operador takeUntil, ya no es necesario almacenar ninguna suscripción. Lo único que hay que hacer es crear un Sujeto, y utilizar takeUntil con dicho Sujeto, de tal forma que cuando stop$ emita un valor, todo Observable que utilice el operador se cancelará.
+
+```ts
+import { takeUntil, tap } from "rxjs/operators";
+import { interval, timer, Subject } from "rxjs";
+
+const stop$ = new Subject<void>();
+
+function stop() {
+  stop$.next();
+  stop$.complete();
+}
+
+// Al cabo de 5s, se llamará a la función stop
+timer(5000).pipe(tap(_ => stop())).subscribe();
+
+// Will emit numbers until we call the stop function
+interval(1000)
+  .pipe(takeUntil(stop$))
+  .subscribe(console.log);
+// Salida: 0, 1, 2, 3, 4 (llamada a stop())
+```
+
+Emitir una secuencia de números cada segundo, hasta que se haga click
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { takeUntil } from "rxjs/operators";
+
+const source = interval(1000);
+const clicks = fromEvent(document, "click");
+const result = source.pipe(takeUntil(clicks));
+result.subscribe((x) => console.log(x));
+```
+
+
+### skip()
+El operador `skip()` Retorna un Observable que se salta las primeras x emisiones del Observable fuente
+
+<img src="img/op-skip.png" width="auto;"/>
+
+`skip` se salta un número determinado por el parámetro count de emisiones del Observable fuente, y después continúa emitiendo valores normalmente.
+
+La nomenclatura del operador sería `skip<T>(count: number): MonoTypeOperatorFunction<T>` donde
+
+* **count:** El número de elementos del Observable fuente que serán saltados.
+
+* **MonoTypeOperatorFunction<T>:** Un Observable que se salta valores emitidos por el Observable fuente.
+
+
+Su firma sería `takeUntil<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Ignorar los primeros 5 clicks
+
+```ts
+import { skip } from "rxjs/operators";
+import { from, fromEvent } from "rxjs";
+
+const click$ = fromEvent(document, "click");
+
+click$.pipe(skip(5)).subscribe(console.log);
+// Salida: ......... ClickEvent {}...
+```
+
+Otro ejemplo pudiese ser Ignorar el primer elemento
+
+```ts
+import { skip } from "rxjs/operators";
+import { from } from "rxjs";
+
+const language$ = from([
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+]);
+
+language$.pipe(skip(1)).subscribe(console.log);
+// Salida: { name: "Ruby", type: "Multiparadigma" }, { name: "Haskell", type: "Funcional" }
+```
+
+### distinct()
+El operador `distinct()` Retorna un Observable que emite todos los elementos del Observable fuente que sean distintos a los elementos anteriores
+
+<img src="img/op-distinct.png" width="auto;"/>
+
+Si se proporciona una función keySelector, se proyectará cada valor emitido por el Observable fuente a un nuevo valor, que se comparará con los valores previamente emitidos para ver si es distinto o no. Si no se proporciona una función keySelector, se compararán los valores emitidos por el Observable fuente directamente con las emisiones previas.
+
+En los entornos de ejecución de JavaScript que den soporte a Set, distinct utilizará un Set para mejorar el rendimiento de la comprobación de distinción.
+
+En otros entornos de ejecución, distinct utilizará una implementación mínima de Set que depende de un Array y de indexOf, por lo que el rendimiento empeorará de forma directamente proporcional a la cantidad de valores que se proporcionen. Incluso en los navegadores más modernos, un distinct ejecutándose durante un periodo largo de tiempo puede provocar fugas de memoria. Para minimizar este efecto en algunos escenarios, se puede proporcionar un parámetro `flushes` opcional para reiniciar el `Set` interno, eliminando todos sus valores.
+
+La nomenclatura del operador sería `distinct<T, K>(keySelector?: (value: T) => K, flushes?: Observable<any>): MonoTypeOperatorFunction<T>` donde
+
+* **keySelector:** El número de elementos del Observable fuente que serán saltados.
+
+* **flushes:** Observable opcional para reiniciar el HashSet interno del operador. El valor por defecto es `undefined`.
+
+* **MonoTypeOperatorFunction<T>:** Un Observable que se salta valores emitidos por el Observable fuente.
+
+
+Su firma sería `takeUntil<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Usar distinct sin un selector
+
+```ts
+import { distinct } from "rxjs/operators";
+import { of } from "rxjs";
+
+const fruit$ = of(
+  "Fresa",
+  "Cereza",
+  "Cereza",
+  "Arándano",
+  "Fresa",
+  "Arándano",
+  "Cereza"
+);
+
+fruit$.pipe(distinct()).subscribe(console.log);
+// Salida: Fresa, Cereza, Arándano
+```
+
+Otro ejemplo pudiese ser Usar distinct con un selector de clave
+
+```ts
+import { distinct } from "rxjs/operators";
+import { of } from "rxjs";
+
+const language$ = of(
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" }
+);
+
+language$.pipe(distinct(({ name }) => name)).subscribe(console.log);
+/* Salida: 
+{ name: "Java", type: "Orientado a objetos" }, 
+{ name: "Ruby", type: "Multiparadigma" }, 
+{ name: "Haskell", type: "Funcional" }
+*/
+```
+
+Un ejemplo simple con números
+
+```ts
+import { of } from "rxjs";
+import { distinct } from "rxjs/operators";
+
+of(1, 1, 2, 2, 2, 1, 2, 3, 4, 3, 2, 1)
+  .pipe(distinct())
+  .subscribe((x) => console.log(x)); // 1, 2, 3, 4
+```
+
+Un ejemplo utilizando la función keySelector
+
+```ts
+import { of } from "rxjs";
+import { distinct } from "rxjs/operators";
+
+interface Person {
+  age: number;
+  name: string;
+}
+
+of<Person>(
+  { age: 4, name: "Foo" },
+  { age: 7, name: "Bar" },
+  { age: 5, name: "Foo" }
+)
+  .pipe(distinct((p: Person) => p.name))
+  .subscribe((x) => console.log(x));
+
+// Salida:
+// { age: 4, name: 'Foo' }
+// { age: 7, name: 'Bar' }
+```
+
+
+### distinctUntilChanged()
+El operador `distinctUntilChanged()` Retorna un Observable que emite todos los elementos emitidos por el Observable fuente que sean distintos al valor anterior
+
+<img src="img/op-distinctUntilChanged.png" width="auto;"/>
+
+Si se proporciona una función de comparación, se utilizará para comprobar si cada elemento se debe emitir o no.
+
+Si no se proporciona una función de comparación, se utiliza una verificación de igualdad.
+
+La nomenclatura del operador sería `distinctUntilChanged<T, K>(compare?: (x: K, y: K) => boolean, keySelector?: (x: T) => K): MonoTypeOperatorFunction<T>` donde
+
+* **compare:** Función de comparación opcional para comprobar si un elemento es distinto al elemento anterior. El valor por defecto es undefined.
+
+* **keySelector:** Opcional. El valor por defecto es undefined. Tipo: (x: T) => K.
+
+* **MonoTypeOperatorFunction<T>:** Un Observable que emite elementos del Observable fuente que tengan valores distintos.
+
+Un buen ejemplo sería Usar distinctUntilChanged sin una función de comparación
+
+```ts
+import { distinctUntilChanged } from "rxjs/operators";
+import { of } from "rxjs";
+
+const fruit$ = of("Fresa", "Cereza", "Cereza", "Arándano", "Arándano", "Fresa");
+
+fruit$.pipe(distinctUntilChanged()).subscribe(console.log);
+// Salida: Fresa, Cereza, Arándano, Fresa
+```
+
+Usar distinctUntilChanged con una función de comparación
+
+```ts
+import { distinctUntilChanged } from "rxjs/operators";
+import { of } from "rxjs";
+
+const language$ = of(
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" }
+);
+
+language$
+  .pipe(
+    distinctUntilChanged(
+      ({ name: previousName }, { name }) => previousName === name
+    )
+  )
+  .subscribe(console.log);
+/* Salida: 
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" }
+*/
+```
+
+Un ejemplo simple con números
+
+```ts
+import { of } from "rxjs";
+import { distinctUntilChanged } from "rxjs/operators";
+
+of(1, 1, 2, 2, 2, 1, 1, 2, 3, 3, 4)
+  .pipe(distinctUntilChanged())
+  .subscribe((x) => console.log(x)); // 1, 2, 1, 2, 3, 4
+```
+
+Un ejemplo usando una función de comparación
+
+```ts
+import { of } from 'rxjs';
+import { distinctUntilChanged } from 'rxjs/operators';
+
+interface Person {
+    age: number,
+    name: string
+}
+
+of<Person>(
+    { age: 4, name: 'Foo'},
+    { age: 7, name: 'Bar'},
+    { age: 5, name: 'Foo'},
+    { age: 6, name: 'Foo'},
+  ).pipe(
+    distinctUntilChanged((p: Person, q: Person) => p.name === q.name),
+  )
+  .subscribe(x => console.log(x));
+
+// displays:
+// { age: 4, name: 'Foo' }
+// { age: 7, name: 'Bar' }
+// { age: 5, name: 'Foo' }
+```
+
+### distinctUntilKeyChanged()
+El operador `distinctUntilKeyChanged()` Retorna un Observable que emite los elementos del Observable fuente cuya propiedad especificada sea distinta a la del elemento anterior
+
+<img src="img/op-distinctUntilKeyChanged.png" width="auto;"/>
+
+Si se proporciona una función de comparación, se utilizará para comprobar si cada elemento se debe emitir o no.
+
+Si no se proporciona una función de comparación, se utiliza una verificación de igualdad.
+
+La nomenclatura del operador sería `distinctUntilKeyChanged<T, K extends keyof T>(key: K, compare?: (x: T[K], y: T[K]) => boolean): MonoTypeOperatorFunction<T>` donde
+
+* **key:** Clave de la propiedad del objeto que se desea comparar.
+
+* **keySelector:** El valor por defecto es undefined. Función de comparación opcional que se utiliza para comprobar si un elemento es distinto al elemento anterior.
+
+* **MonoTypeOperatorFunction<T>:** Un Observable que emite elementos del Observable fuente si la propiedad especificada es distinta a la del elemento anterior.
+
+Su firma sería `takeUntil<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir solo cuando la tecla pulsada sea distinta a la tecla pulsada anterior
+
+```ts
+import { distinctUntilKeyChanged, map } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown").pipe(
+  distinctUntilKeyChanged("code"),
+  map(({ code }) => code)
+);
+
+key$.subscribe(console.log);
+// Salida: (Pulsar tecla y) (Pulsar tecla x) 'KeyX'
+```
+
+Emitir el objeto lenguaje si su propiedad name es distinta a la del objeto anterior
+
+```ts
+import { distinctUntilKeyChanged } from "rxjs/operators";
+import { of } from "rxjs";
+
+const language$ = of(
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" }
+);
+
+language$.pipe(distinctUntilKeyChanged("name")).subscribe(console.log);
+/* Salida:
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" },
+  { name: "Haskell", type: "Funcional" },
+  { name: "Java", type: "Orientado a objetos" },
+  { name: "Ruby", type: "Multiparadigma" }
+*/
+```
+
+Utilizar una función de comparación para ignorar las diferencias de mayúsculas/minúsculas
+
+```ts
+import { of } from "rxjs";
+import { distinctUntilKeyChanged } from "rxjs/operators";
+
+const user$ = of(
+  { name: "NyaGarcía", age: 23 },
+  { name: "nyagarcía", age: 23 },
+  { name: "zaldih", age: 21 },
+  { name: "caballerog", age: 35 },
+  { name: "caballeroG", age: 35 }
+);
+
+user$
+  .pipe(
+    distinctUntilKeyChanged(
+      "name",
+      (prev, curr) => prev.toLowerCase() === curr.toLowerCase()
+    )
+  )
+  .subscribe(console.log);
+/* Salida: 
+  { name: 'NyaGarcía', age: 23 }, 
+  { name: 'zaldih', age: 21} , 
+  { name: 'caballerog', age: 35 }
+*/
+```
+
+Un ejemplo comparando el campo name
+
+```ts
+import { of } from "rxjs";
+import { distinctUntilKeyChanged } from "rxjs/operators";
+
+interface Person {
+  age: number;
+  name: string;
+}
+
+of<Person>(
+  { age: 4, name: "Foo" },
+  { age: 7, name: "Bar" },
+  { age: 5, name: "Foo" },
+  { age: 6, name: "Foo" }
+)
+  .pipe(distinctUntilKeyChanged("name"))
+  .subscribe((x) => console.log(x));
+
+// Salida:
+// { age: 4, name: 'Foo' }
+// { age: 7, name: 'Bar' }
+// { age: 5, name: 'Foo' }
+```
+
+Un ejemplo comparando las primeras letras de la propiedad name
+```ts
+import { of } from "rxjs";
+import { distinctUntilKeyChanged } from "rxjs/operators";
+
+interface Person {
+  age: number;
+  name: string;
+}
+
+of<Person>(
+  { age: 4, name: "Foo1" },
+  { age: 7, name: "Bar" },
+  { age: 5, name: "Foo2" },
+  { age: 6, name: "Foo3" }
+)
+  .pipe(
+    distinctUntilKeyChanged(
+      "name",
+      (x: string, y: string) => x.substring(0, 3) === y.substring(0, 3)
+    )
+  )
+  .subscribe((x) => console.log(x));
+
+// Salida:
+// { age: 4, name: 'Foo1' }
+// { age: 7, name: 'Bar' }
+// { age: 5, name: 'Foo2' }
 ```
