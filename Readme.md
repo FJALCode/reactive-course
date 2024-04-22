@@ -41,8 +41,11 @@
     * [distinct()](#distinct)
     * [distinctUntilChanged()](#distinctuntilchanged)
     * [distinctUntilKeyChanged()](#distinctuntilkeychanged)
-    
-
+    * [debounceTime()](#debouncetime)
+    * [throttleTime()](#throttletime)
+    * [sampleTime()](#sampletime)
+    * [sample()](#sample)
+    * [auditTime()](#audittime)
 
 ## ¿Qué es la programación reactiva?
 Es un paradigma de la programación declarativa funcional relacionada con el tratamiento de flujos de datos (data streams) y la propagación de los cambios.
@@ -2129,4 +2132,311 @@ of<Person>(
 // { age: 4, name: 'Foo1' }
 // { age: 7, name: 'Bar' }
 // { age: 5, name: 'Foo2' }
+```
+
+### debounceTime()
+El operador `debounceTime()` Emite un valor del Observable fuente si, y solo si, pasa un periodo de tiempo determinado sin que este emita ningún valor
+
+<img src="img/op-debounceTime.png" width="auto;"/>
+
+Es como `delay`, pero emite únicamente el valor más reciente de una sucesión de emisiones.
+`debounceTime()` retrasa los valores del Observable fuente, eliminando las emisiones almacenadas pendientes de ser emitidas si el Observable fuente emite algún valor. Este operador almacena el valor más reciente del Observable fuente, y lo emite solo si ha pasado un periodo de tiempo, indicado por `dueTime`, sin que el Observable fuente emita ningún valor. Si el Observable fuente emite un valor antes de que pase el periodo de tiempo `dueTime`, el valor almacenado será eliminado, y nunca se emitirá en el Observable resultante.
+
+Este es un operador de limitación de emisiones, ya que es imposible que se emita más de un valor en cualquiera de las ventanas de tiempo de duración `dueTime`, pero también es un operador similar a `delay`, ya que las emisiones de salida no ocurren en el mismo momento en el que se emitieron en el Observable fuente.
+
+Recibe un `SchedulerLike` opcional para manejar los temporizadores.
+
+La nomenclatura del operador sería `debounceTime<T>(dueTime: number, scheduler: SchedulerLike = async): MonoTypeOperatorFunction<T>` donde
+
+* **dueTime:** La duración, en milisegundos (o en la unidad de tiempo determinada por el planificador opcional), del periodo de tiempo que debe pasar sin que el Observable fuente emita ningún valor, para poder emitir el valor más reciente de dicho Observable.
+
+* **scheduler:** Opcional. El valor por defecto es `async`. El `SchedulerLike` que utilizar para gestionar los temporizadores que manejan el timeout para cada valor.
+
+* **MonoTypeOperatorFunction<T>:** Un Observable que retrasa la emisiones del Observable fuente en un periodo de tiempo especificado por `dueTime`. Es posible que algunos valores sean eliminados si se emiten con demasiada frecuencia.
+
+Su firma sería `takeUntil<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir la tecla pulsada más reciente, tras una sucesión rápida de teclas. Por ejemplo, si escribimos 'RxJS mola' muy rápidamente (con menos de 500ms entre pulsaciones), solo se emitirá la última letra (a)
+
+```ts
+import { debounceTime } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+key$.pipe(debounceTime(500)).subscribe(({ code }) => console.log(code));
+// Salida: KeyE
+```
+
+Emitir la posición del último click tras una sucesión rápida de clicks
+
+```ts
+import { debounceTime } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const click$ = fromEvent<MouseEvent>(document, "click");
+
+click$
+  .pipe(debounceTime(1000))
+  .subscribe(({ screenX, screenY }) =>
+    console.log(
+      `Tu último click fue en la posición x: ${screenX}, y: ${screenY}`
+    )
+  );
+// Salida: Tu último click fue en la posición x: 1278 , y: 265
+```
+
+Emite el click más reciente tras una sucesión de clicks
+
+```ts
+import { fromEvent } from "rxjs";
+import { debounceTime } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(debounceTime(1000));
+result.subscribe((x) => console.log(x));
+```
+
+### throttleTime()
+El operador `throttleTime()` Emite un valor del Observable fuente e ignora las emisiones siguientes durante un periodo de tiempo determinado. Después, repite el proceso
+
+<img src="img/op-throttleTime.png" width="auto;"/>
+
+`throttleTime()` emite los valores del Observable fuente mientras su temporizador interno está deshabilitado, y los ignora mientras su temporizador está habilitado. Inicialmente, el temporizador está deshablitado. En cuanto se recibe el primer valor de la fuente, este se emite en el Observable resultante y se habilita e temporizador. Tras `duration` milisegundos (o la unidad temporal determinada internamente por el planificador opcional) se deshabilita el temporizador y se repite el proceso para el siguiente valor de la fuente. Opcionalmente, recibe un SchedulerLike para gestionar los temporizadores.
+
+La nomenclatura del operador sería `throttleTime<T>(duration: number, scheduler: SchedulerLike = async, config: ThrottleConfig = defaultThrottleConfig): MonoTypeOperatorFunction<T>` donde
+
+* **duration:** El periodo de tiempo que debe pasar antes de emitir el siguiente valor, a partir de la última emisión, en milisegundos o en la unidad de tiempo determinada por el planificador opcional.
+
+* **scheduler:** Opcional. El valor por defecto es `async`. El `SchedulerLike` que utilizar para gestionar los temporizadores que se encargan de regular las emisiones.
+
+* **config:** Opcional. El valor por defecto es `defaultThrottleConfig`. Un objeto de configuración para definir el comportamiento de los parámetros `leading` y `trailing`. Por defecto es `{ leading: true, trailing: false}.`
+
+* **MonoTypeOperatorFunction<T>:** Un Observable that performs the throttle operation to limit the rate of emissions from the source.
+
+Su firma sería `throttleTime<T>(duration: number, scheduler: SchedulerLike = async, config: ThrottleConfig = defaultThrottleConfig): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir la tecla pulsada, ignorar todos los valores siguientes durante 2 segundos, y repetir
+
+```ts
+import { throttleTime } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+key$.pipe(throttleTime(2000)).subscribe(({ code }) => console.log(code));
+// Salida: KeyX (2s) KeyO...
+```
+
+Emitir un valor, ignorar todos los valores durante 2 segundos, y repetir
+
+```ts
+import { map, throttleTime } from "rxjs/operators";
+import { interval, zip, from } from "rxjs";
+
+// El Observable fruit$ emite una fruta cada segundo
+const fruit$ = zip(
+  from(["Fresa", "Cereza", "Arándano", "Mora", "Frambuesa", "Grosella"]),
+  interval(1000)
+).pipe(map(([fruit]) => fruit));
+
+fruit$.pipe(throttleTime(2000)).subscribe(console.log);
+// Salida: Fresa, Mora
+```
+
+Emite como mucho un click por segundo
+
+```ts
+import { fromEvent } from "rxjs";
+import { throttleTime } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(throttleTime(1000));
+result.subscribe((x) => console.log(x));
+```
+
+Doble Click
+
+Emitir clicks que ocurran en los 400ms siguientes al click previo. De esta manera, se detecta el doble click. Hace uso del parámetro de configuración `trailing`.
+
+```ts
+import { fromEvent, asyncScheduler } from "rxjs";
+import { throttleTime, withLatestFrom } from "rxjs/operators";
+
+// defaultThottleConfig = { leading: true, trailing: false }
+const throttleConfig = {
+  leading: false,
+  trailing: true,
+};
+
+const click = fromEvent(document, "click");
+const doubleClick = click.pipe(
+  throttleTime(400, asyncScheduler, throttleConfig)
+);
+
+doubleClick.subscribe((throttleValue: Event) => {
+  console.log(`Doble-click! Timestamp: ${throttleValue.timeStamp}`);
+});
+```
+Si se habilita el parámetro `leading` en este ejemplo, la salida sería el primer click y el doble click, pero se restringiría cualquier click adicional en un periodo de 400ms.
+
+### sampleTime()
+El operador `sampleTime()` Emite la emisión más reciente del Observable fuente en cada periodo de tiempo determinado
+
+<img src="img/op-sampleTime.png" width="auto;"/>
+
+Toma una muestra del Observable fuente a intervalos periódicos de tiempo, emitiendo la emisión más reciente en dicho periodo de tiempo.
+
+`sampleTime` emite la emisión más reciente del Observable fuente, desde el último muestreo, a no ser que la fuente no haya emitido nada desde el último muestreo. El muestreo ocurre de forma periódica, cada `period` milisegundos (o la unidad de tiempo definida por el argumento opcional `scheduler`.) El muestreo comienza en cuando se realice la suscripción al Observable resultante.
+
+La nomenclatura del operador sería `sampleTime<T>(period: number, scheduler: SchedulerLike = async): MonoTypeOperatorFunction<T>` donde
+
+* **period:** El periodo de muestreo expresado en milisegundos o en la unidad de tiempo determinada por el planificador opcional
+
+* **scheduler:** Opcional. El valor por defecto es `async`. El SchedulerLike que utilizar para gestionar los temporizadores que se encargan del muestreo.
+
+* **MonoTypeOperatorFunction<T>:**  Un Observable que emite la emisión más reciente del Observable fuente en el intervalo de tiempo especificado.
+
+Su firma sería `throttleTime<T>(duration: number, scheduler: SchedulerLike = async, config: ThrottleConfig = defaultThrottleConfig): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir el valor más reciente desde el último muestreo, realizado cada 2 segundos
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { sampleTime } from "rxjs/operators";
+
+const number$ = interval(1000);
+
+number$.pipe(sampleTime(2000)).subscribe(console.log);
+// Salida: 0, 2, 4, 6, 8...
+```
+
+Emitir la tecla pulsada más reciente desde el último muestreo, realizado cada 2 segundos
+
+```ts
+import { fromEvent } from "rxjs";
+import { map, sampleTime } from "rxjs/operators";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+key$
+  .pipe(
+    sampleTime(2000),
+    map(({ code }) => code)
+  )
+  .subscribe((code) =>
+    console.log(`La tecla pulsada más reciente es: ${code}`)
+  );
+// Salida: (Pulsar tecla y) (Pulsar tecla x) La tecla pulsada más reciente es: KeyX
+```
+
+Cada segundo, emitir el click más reciente
+
+```ts
+import { fromEvent } from "rxjs";
+import { sampleTime } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(sampleTime(1000));
+result.subscribe((x) => console.log(x));
+```
+
+### sample()
+El operador `sample()` Emite la emisión más reciente del Observable fuente cuando un segundo Observable, el notificador, emite un valor
+
+<img src="img/op-sample.png" width="auto;"/>
+
+Es como `sampleTime`, pero toma una muestra del Observable fuente cuando el Observable notificador emite un valor.
+
+Cuando el Observable `notifier` emite un valor o se completa, `sample` toma una muestra del Observable fuente y emite la emisión más reciente desde el último muestreo, a no ser que la fuente no haya emitido nada desde el último muestreo. En cuanto se lleve a cabo la suscripción al Observable resultante, también se realizará la del Observable `notifier`.
+
+La nomenclatura del operador sería `sample<T>(notifier: Observable<any>): MonoTypeOperatorFunction<T>` donde
+
+* **notifier:** El Observable que indica cuándo emitir el valor más reciente del Observable fuente.
+
+* **MonoTypeOperatorFunction<T>:**  Un Observable que emite el valor más reciente del Observable fuente cuando el Observable notifier emite un valor o se completa.
+
+Su firma sería `throttleTime<T>(duration: number, scheduler: SchedulerLike = async, config: ThrottleConfig = defaultThrottleConfig): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Emitir el valor más reciente desde el último muestreo, realizado cuando interval emite (cada 2s)
+
+```ts
+import { interval } from "rxjs";
+import { sample } from "rxjs/operators";
+
+const number$ = interval(1000);
+
+number$.pipe(sample(interval(2000))).subscribe(console.log);
+// Salida: 1, 3, 5, 7, 9...
+```
+
+Emitir el valor más reciente desde el último muestreo, realizado cada vez que se pulsa una tecla
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { sample } from "rxjs/operators";
+
+const number$ = interval(1000);
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+number$
+  .pipe(sample(key$))
+  .subscribe((n) =>
+    console.log(`El último valor emitido tras la última tecla pulsada es: ${n}`)
+  );
+// Salida: El último valor emitido tras la última tecla pulsada es: n
+```
+
+Con cada click, realizar un muestreo del temporizador seconds
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { sample } from "rxjs/operators";
+
+const seconds = interval(1000);
+const clicks = fromEvent(document, "click");
+const result = seconds.pipe(sample(clicks));
+result.subscribe((x) => console.log(x));
+```
+
+### auditTime()
+El operador `auditTime()` Ignora los valores de la fuente durante un periodo de tiempo, tras el cual emite el valor más reciente del Observable fuente.
+
+<img src="img/op-auditTime.png" width="auto;"/>
+
+Cuando recibe un valor de la fuente, lo ignora, además de todos los valores posteriores durante un periodo de tiempo. Una vez finalizado el periodo de tiempo, emite el valor más reciente del Observable fuente.
+
+`auditTime` es similar a throttleTime, pero emite el último valor del periodo de silenciamiento, en lugar del primero. auditTime emite el valor más reciente del Observable fuente en cuanto su temporizador interno se deshabilita, e ignora los valores de la fuente mientras el temporizador está habilitado. Inicialmente, el temporizador está deshabilitado. En cuanto llega el primer valor de la fuente, se habilita el temporizador. Tras un periodo de tiempo, determinado por `duration`, se deshabilita el temporizador y se emite el valor más reciente que haya emitido la fuente, en el Observable resultante. Este proceso se repite con cada valor de la fuente. auditTime puede recibir un SchedulerLike opcional para gestionar los temporizadores.
+
+La nomenclatura del operador sería `auditTime<T>(duration: number, scheduler: SchedulerLike = async): MonoTypeOperatorFunction<T>` donde
+
+* **duration:** El tiempo que se debe esperar antes de emitir el valor más reciente de la fuente, medido en milisegundos o en la unidad de tiempo determinada por el planificador opcional.
+
+* **scheduler:** 	Opcional. El valor por defecto es async. El SchedulerLike que utilizar para gestionar los temporizadores que se encargan del comportamiento de limitación de emisiones.
+
+* **MonoTypeOperatorFunction<T>:**  Un Observable que limita las emisiones del Observable fuente.
+
+Su firma sería `auditTime<T>(duration: number, scheduler: SchedulerLike = async): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Ignorar las teclas pulsadas durante un periodo de 2s, tras el cual emitir la última tecla pulsada. Repetir.
+
+```ts
+import { auditTime } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+
+const key$ = fromEvent<KeyboardEvent>(document, "keydown");
+
+key$.pipe(auditTime(2000)).subscribe(({ code }) => console.log(code));
+// Salida: (2s) KeyX (2s) KeyO...
+```
+
+Emite como mucho un click por segundo
+
+```ts
+import { fromEvent } from "rxjs";
+import { auditTime } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(auditTime(1000));
+result.subscribe((x) => console.log(x));
 ```
