@@ -46,6 +46,8 @@
     * [sampleTime()](#sampletime)
     * [sample()](#sample)
     * [auditTime()](#audittime)
+    * [catchError()](#catcherror)
+
 
 ## ¿Qué es la programación reactiva?
 Es un paradigma de la programación declarativa funcional relacionada con el tratamiento de flujos de datos (data streams) y la propagación de los cambios.
@@ -2439,4 +2441,171 @@ import { auditTime } from "rxjs/operators";
 const clicks = fromEvent(document, "click");
 const result = clicks.pipe(auditTime(1000));
 result.subscribe((x) => console.log(x));
+```
+
+### catchError()
+El operador `catchError()` Captura errores en el Observable que se manejan devolviendo un Observable nuevo o lanzando un error
+
+<img src="img/op-catchError.png" width="auto;"/>
+
+`catchError` captura errores en el Observable fuente, manejándolos de dos maneras posibles: bien devolviendo un Observable nuevo o bien lanzando un nuevo error.
+
+La nomenclatura del operador sería `catchError<T, O extends ObservableInput<any>>(selector: (err: any, caught: Observable<T>) => O): OperatorFunction<T, T | ObservedValueOf<O>>` donde
+
+* **selector:** Una función que recibe como argumentos err, que es el error, y `caught`, que es el Observable fuente, por si se quiere "reiniciar" el Observable devolviéndolo otra vez. El Observable que se retorne por el selector es el que se utilizará para continuar la cadena Observable.
+
+
+* **OperatorFunction<T, T | ObservedValueOf<O>>:**  Un Observable que se puede originar en el Observable fuente o en el Observable retornado por la función selector.
+
+Su firma sería `auditTime<T>(duration: number, scheduler: SchedulerLike = async): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Capturar un error, retornando un Observable
+
+```ts
+import { throwError, of } from "rxjs";
+import { catchError } from "rxjs/operators";
+
+const error$ = throwError("¡Oh no!");
+
+error$
+  .pipe(catchError((error) => of(`Error capturado grácilmente: ${error}`)))
+  .subscribe(console.log);
+// Salida: Error capturado grácilmente: ¡Oh no!
+```
+
+Capturar un error y lanzar otro error
+
+```ts
+import { throwError, of } from "rxjs";
+import { catchError } from "rxjs/operators";
+
+const error$ = throwError("Oh no!");
+
+error$
+  .pipe(
+    catchError((error) => {
+      throw `Lanzando un nuevo error: ${error}`;
+    })
+  )
+  .subscribe(console.log, console.error);
+// Salida: (Error) Lanzando un nuevo error: Oh no!
+```
+
+Capturar los errores de un Observable interno
+
+Al capturar los errores que ocurren en un Observable interno (un Observable emitido por un Observable de orden superior), se debe tener cuidado a la hora de utilizar el operador catchError ya que, si se coloca en el sitio equivocado, el flujo del Observable fuente no seguirá ejecutándose tras capturar el error.
+
+A continuación, se puede ver cómo el uso incorrecto de catchError hará que, después de capturar el error que devuelve la primera petición, el flujo se completará y no se harán las otras dos peticiones restantes:
+
+```ts
+import { map, concatMap, catchError } from "rxjs/operators";
+import { ajax } from "rxjs/ajax";
+import { of } from "rxjs";
+
+const pokemonId$ = of(-3, 5, 6);
+
+function getPokemonName(id: number) {
+  return ajax
+    .getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`)
+    .pipe(map(({ name }) => name));
+}
+
+pokemonId$
+  .pipe(
+    concatMap((id) => getPokemonName(id)),
+    catchError((error) => of(`¡Oh no, ha ocurrido un error! ${error}`))
+  )
+  .subscribe(console.log, console.error, () => console.log("Completado"));
+// Salida: ¡Oh no, ha ocurrido un error! AjaxError: ajax error 404, Completado
+```
+
+Sin embargo, si se utiliza catchError en el Observable interno, el comportamiento es el que se busca: cuando falle la primera petición, se capturará el error y el flujo seguirá ejecutándose, realizando las dos peticiones restantes:
+
+```ts
+import { map, concatMap, catchError } from "rxjs/operators";
+import { ajax } from "rxjs/ajax";
+import { of } from "rxjs";
+
+const pokemonId$ = of(-3, 5, 6);
+
+function getPokemonName(id: number) {
+  return ajax
+    .getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`)
+    .pipe(map(({ name }) => name));
+}
+
+pokemonId$
+  .pipe(
+    concatMap((id) =>
+      getPokemonName(id).pipe(catchError((error) => of(`¡Oh no! ${error}`)))
+    )
+  )
+  .subscribe(console.log, console.error, () => console.log("Completado"));
+// Salida: ¡Oh no, ha ocurrido un error!, charmeleon, charizard, Completado
+```
+
+Continuar con un Observable diferente cuando ocurre un error
+
+```ts
+import { of } from "rxjs";
+import { map, catchError } from "rxjs/operators";
+
+of(1, 2, 3, 4, 5)
+  .pipe(
+    map((n) => {
+      if (n === 4) {
+        throw "four!";
+      }
+      return n;
+    }),
+    catchError((err) => of("I", "II", "III", "IV", "V"))
+  )
+  .subscribe((x) => console.log(x));
+// 1, 2, 3, I, II, III, IV, V
+```
+
+Reiniciar el Observable fuente en caso de error, parecido al operador retry()
+
+```ts
+import { of } from "rxjs";
+import { map, catchError, take } from "rxjs/operators";
+
+of(1, 2, 3, 4, 5)
+  .pipe(
+    map((n) => {
+      if (n === 4) {
+        throw "four!";
+      }
+      return n;
+    }),
+    catchError((err, caught) => caught),
+    take(30)
+  )
+  .subscribe((x) => console.log(x));
+// 1, 2, 3, 1, 2, 3...
+```
+
+Lanzar un error nuevo cuando el Observable fuente lance un error
+
+```ts
+import { of } from "rxjs";
+import { map, catchError } from "rxjs/operators";
+
+of(1, 2, 3, 4, 5)
+  .pipe(
+    map((n) => {
+      if (n === 4) {
+        throw "four!";
+      }
+      return n;
+    }),
+    catchError((err) => {
+      throw "error en la fuente. Detalles: " + err;
+    })
+  )
+  .subscribe(
+    (x) => console.log(x),
+    (err) => console.log(err)
+  );
+// 1, 2, 3, error en la fuente. Detalles: four!
 ```
