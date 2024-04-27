@@ -47,6 +47,11 @@
     * [sample()](#sample)
     * [auditTime()](#audittime)
     * [catchError()](#catcherror)
+    * [mergeAll()](#mergeall)
+    * [mergeMap()](#mergemap)
+    * [switchMap()](#switchmap)
+    * [concatMap()](#concatmap)
+    * [exhaustMap()](#exhaustmap)
 
 
 ## ¿Qué es la programación reactiva?
@@ -2608,4 +2613,398 @@ of(1, 2, 3, 4, 5)
     (err) => console.log(err)
   );
 // 1, 2, 3, error en la fuente. Detalles: four!
+```
+
+### mergeAll()
+El operador `mergeAll()` Convierte un Observable de orden superior en uno de primer orden que emite las emisiones de los Observables internos de forma concurrente, es decir combina observables y emite la respuesta de ambos en el orden que van saliendo.
+
+<img src="img/op-mergeAll.png" width="auto;"/>
+
+Convierte un Observable de orden superior en uno de primer orden.
+
+`mergeAll` se suscribe a un Observable que emite Observables, también conocido como Observable de orden superior. Cada vez que observa la emisión de uno de los Observables internos, se suscribe a él y emite todos los valores del Observable interno en el Observable resultante. El Observable resultante se completa cuando todos los Observables internos se hayan completado.
+
+Cualquier error que se produzca en uno de los Observables internos se emite de forma inmediata en el Observable resultante.
+
+La nomenclatura del operador sería `mergeAll<T>(concurrent: number = Number.POSITIVE_INFINITY): OperatorFunction<ObservableInput<T>, T>` donde
+
+* **concurrent:** Opcional. El valor por defecto es Number.POSITIVE_INFINITY. El máximo número de Observables internos suscritos concurrentemente.
+
+* **OperatorFunction<ObservableInput<T>, T>:**  Un Observable que emite los valores de todos los Observables internos que emita el Observable fuente.
+
+Su firma sería `auditTime<T>(duration: number, scheduler: SchedulerLike = async): MonoTypeOperatorFunction<T>`
+
+Un buen ejemplo sería Realizar todas las peticiones AJAX de forma concurrente (en paralelo)
+
+```ts
+import { mergeAll, map, delay } from "rxjs/operators";
+import { ajax } from "rxjs/ajax";
+import { of } from "rxjs";
+
+const pokemonId$ = of(1, 5, 6);
+
+function getPokemonName(id: number) {
+  return ajax.getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`).pipe(
+    map(({ name }) => name),
+    delay(2000)
+  );
+}
+
+pokemonId$
+  .pipe(
+    map((id) => getPokemonName(id)),
+    mergeAll()
+  )
+  .subscribe(console.log);
+// Salida: (2s) bulbasaur, charmeleon, charizard
+```
+
+Realizar como mucho dos peticiones AJAX de forma concurrente
+
+```ts
+import { mergeAll, map, delay } from "rxjs/operators";
+import { ajax } from "rxjs/ajax";
+import { of } from "rxjs";
+
+const pokemonId$ = of(1, 5, 6);
+
+function getPokemonName(id: number) {
+  return ajax.getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`).pipe(
+    map(({ name }) => name),
+    delay(2000)
+  );
+}
+
+const maxConcurrent = 2;
+
+pokemonId$
+  .pipe(
+    map((id) => getPokemonName(id)),
+    mergeAll(maxConcurrent)
+  )
+  .subscribe(console.log);
+// Salida: (2s) bulbasaur, charmeleon (2s) charizard
+```
+
+Generar un Observable intervalo por cada evento click, y unir sus emisiones en un solo Observable
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { map, mergeAll } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const higherOrder = clicks.pipe(map((ev) => interval(1000)));
+const firstOrder = higherOrder.pipe(mergeAll());
+firstOrder.subscribe((x) => console.log(x));
+```
+
+Emitir los números del 0 al 9 a intervalos de un segundo por cada click, permitiendo únicamente 2 temporizadores concurrentes
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { take, map, mergeAll } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const higherOrder = clicks.pipe(map((ev) => interval(1000).pipe(take(10))));
+const firstOrder = higherOrder.pipe(mergeAll(2));
+firstOrder.subscribe((x) => console.log(x));
+```
+
+
+
+### mergeMap()
+El operador `mergeMap()` Proyecta cada valor emitido por la fuente a un Observable que se fusiona en el Observable resultante. Se debe utilizar `mergeMap` si se quieren tener varios Observables internos suscritos de forma concurrente. mergeMap() puede mantener todas las suscripciones que se deseen activas
+
+<img src="img/op-mergeMap.png" width="auto;"/>
+
+Proyecta cada valor a un Observable interno, y 'aplasta' cada uno de estos Observables internos mediante el operador `mergeAll`.
+
+Retorna un Observable que, después de aplicar una función a cada elemento emitido por el Observable fuente, donde dicha función retorna un Observable, fusiona los Observables internos resultantes y emite el resultado de la fusión.
+
+La nomenclatura del operador sería `mergeMap<T, R, O extends ObservableInput<any>>(project: (value: T, index: number) => O, resultSelector?: number | ((outerValue: T, innerValue: ObservedValueOf<O>, outerIndex: number, innerIndex: number) => R), concurrent: number = Number.POSITIVE_INFINITY): OperatorFunction<T, ObservedValueOf<O> | R>` donde
+
+* **project:** Una función que, al aplicarse a un elemento emitido por el Observable fuente, retorna un Observable.
+
+* **resultSelector:** Opcional. El valor por defecto es `undefined`. Tipo: `number | ((outerValue: T, innerValue: ObservedValueOf, outerIndex: number, innerIndex: number) => R).`
+
+* **concurrent:** Opcional. El valor por defecto es `Number.POSITIVE_INFINITY`. El máximo número de Observables de entrada suscritos de forma concurrente.
+
+* **OperatorFunction<T, ObservedValueOf<O> | R>:**  Un Observable que emite el resultado de aplicar la función de proyección ( y el ya obsoleto resultSelector opcional) a cada elemento emitido por el Observable fuente y fusionando los resultados de los Observables obtenidos a partir de esta transformación.
+
+Su firma sería `mergeMap(project: (value: T, index: number) => O, concurrent?: number): OperatorFunction<T, ObservedValueOf<O>>`
+
+Un buen ejemplo sería Como mergeMap se suscribe a los Observables internos de forma concurrente, y se le ha añadido un retardo aleatorio a las peticiones AJAX, se puede observar que // TODO
+
+```ts
+import { mergeMap, map, tap, delayWhen } from "rxjs/operators";
+import { interval, of } from "rxjs";
+import { ajax } from "rxjs/ajax";
+
+function getRandomNumber() {
+  return Math.floor(Math.random() * 100) + 20;
+}
+
+const pokemonId$ = of(1, 4, 7);
+
+function getPokemonName(id: number) {
+  return ajax.getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`).pipe(
+    map(({ name, id }) => ({ name, id })),
+    // Añadimos un retardo aleatorio a cada petición, para poder observar el efecto de mergeMap
+    delayWhen((_) => interval(getRandomNumber() * 100))
+  );
+}
+
+pokemonId$
+  .pipe(
+    tap((number) => console.log(`Obteniendo Pokémon con id: ${number}`)),
+    mergeMap((number) => getPokemonName(number))
+  )
+  .subscribe(console.log);
+/* Output: 
+    Obteniendo Pokémon con id: 1, 
+    Obteniendo Pokémon con id: 4, 
+    Obteniendo Pokémon con id: 7,
+    { name: "Squirtle", id: 7 },
+    { name: "Bulbasaur", id: 1 },
+    { name: "Charmander", id: 4 }
+*/
+```
+
+Proyectar y 'aplastar' cada letra a un Observable que emite cada segundo
+
+```ts
+import { of, interval } from "rxjs";
+import { mergeMap, map } from "rxjs/operators";
+
+const letters = of("a", "b", "c");
+const result = letters.pipe(
+  mergeMap((x) => interval(1000).pipe(map((i) => x + i)))
+);
+result.subscribe((x) => console.log(x));
+
+// Salida:
+// a0
+// b0
+// c0
+// a1
+// b1
+// c1
+// continúa listando a,b,c con un el número ascendiente que corresponda
+```
+
+
+### switchMap()
+El operador `switchMap()` Proyecta cada valor a un Observable interno, y 'aplasta' estos Observables internos. . switchMap() solo puede mantener 1 suscripcion activa a la vez
+
+<img src="img/op-switchMap.png" width="auto;"/>
+
+Retorna un Observable que emite elementos tras aplicar una función a cada elemento emitido por el Observable fuente. Dicha función retorna un Observable interno. Cada vez que switchMap observa uno de estos Observables internos, el Observable resultante comienza a emitir los elementos de ese Observable interno. Cuando se emite un Observable interno nuevo, switchMap inmediatamente deja de emitir los elementos del Observable interno anterior, y comienza a emitir los elementos del nuevo. Este comportamiento se mantiene para todos los Observables internos posteriores.
+
+La nomenclatura del operador sería `switchMap<T, R, O extends ObservableInput<any>>(project: (value: T, index: number) => O, resultSelector?: (outerValue: T, innerValue: ObservedValueOf<O>, outerIndex: number, innerIndex: number) => R): OperatorFunction<T, ObservedValueOf<O> | R>` donde
+
+* **project:** Una función que, al aplicarse a un elemento emitido por el Observable fuente, retorna un Observable.
+
+* **resultSelector:** Opcional. El valor por defecto es `undefined`. Tipo: `number | ((outerValue: T, innerValue: ObservedValueOf, outerIndex: number, innerIndex: number) => R).`
+
+* **concurrent:** Opcional. El valor por defecto es `Number.POSITIVE_INFINITY`. El máximo número de Observables de entrada suscritos de forma concurrente.
+
+* **OperatorFunction<T, ObservedValueOf<O> | R>:**  Un Observable que emite el resultado de aplicar la función de proyección ( y el ya obsoleto `resultSelector` opcional) a cada elemento emitido por el Observable fuente y fusionando los resultados de los Observables obtenidos a partir de esta transformación.
+
+Su firma sería `switchMap(project: (value: T, index: number) => O, resultSelector: (outerValue: T, innerValue: ObservedValueOf<O>, outerIndex: number, innerIndex: number) => R): OperatorFunction<T, R>`
+
+Un buen ejemplo sería Cada vez que se pulsa el botón, se hace una nueva petición, cancelando la petición anterior
+
+```ts
+import { fromEvent } from "rxjs";
+import { delay, mergeAll, switchMap } from "rxjs/operators";
+import { ajax } from "rxjs/ajax";
+
+const click$ =
+  fromEvent < MouseEvent > (document.getElementById("ghibliButton"), "click");
+
+function getGhibliFilms() {
+  return ajax
+    .getJSON("https://ghibliapi.herokuapp.com/films")
+    .pipe(mergeAll(), delay(2000));
+}
+
+click$.pipe(switchMap((_) => getGhibliFilms())).subscribe(console.log);
+// Salida: (Click) (Se hace nueva petición) (Click) (Se hace nueva petición)...
+```
+
+Generar un Observable nuevo según los valores del Observable fuente
+
+```ts
+import { of } from "rxjs";
+import { switchMap } from "rxjs/operators";
+
+const switched = of(1, 2, 3).pipe(
+  switchMap((x: number) => of(x, x ** 2, x ** 3))
+);
+switched.subscribe((x) => console.log(x));
+// Salida:
+// 1
+// 1
+// 1
+// 2
+// 4
+// 8
+// ... y así hasta completar la secuencia
+```
+
+Reiniciar un Observable intervalo con cada click
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { switchMap } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(switchMap((ev) => interval(1000)));
+result.subscribe((x) => console.log(x));
+```
+
+### concatMap()
+El operador `concatMap()` Proyecta cada valor emitido por la fuente a un Observable interno que se une al Observable resultante de forma secuencial, esperando a que cada Observable interno esté completo antes de unir el siguiente
+
+<img src="img/op-concatMap.png" width="auto;"/>
+
+Retorna un Observable que emite elementos según el resultado de aplicar una función a cada elemento emitido por el Observable fuente, donde dicha función retorna un Observable interno. Cada nuevo Observable interno se concatena con el Observable interno previo.
+
+Advertencia: Si los valores de la fuente se emiten de forma ilimitada, y más rápidamente de lo que sus Observable internos correspondientes pueden completarse, habrá problemas de memoria, ya que los Observables internos se acumularán en un búfer ilimitado esperando que llegue se turno de ser suscritos.
+
+Nota: concatMap es equivalente a utilizar mergeMap, teniendo el parámetro de concurrencia el valor 1.
+
+La nomenclatura del operador sería `concatMap<T, R, O extends ObservableInput<any>>(project: (value: T, index: number) => O, resultSelector?: (outerValue: T, innerValue: ObservedValueOf<O>, outerIndex: number, innerIndex: number) => R): OperatorFunction<T, ObservedValueOf<O> | R>` donde
+
+* **project:** Una función que, al aplicarse a un elemento emitido por el Observable fuente, retorna un Observable.
+
+* **resultSelector:** Opcional. El valor por defecto es `undefined`. Tipo: `number | ((outerValue: T, innerValue: ObservedValueOf, outerIndex: number, innerIndex: number) => R).`
+
+* **OperatorFunction<T, ObservedValueOf<O> | R>:**  Un Observable que emite el resultado de aplicar la función de proyección ( y el ya obsoleto `resultSelector` opcional) a cada elemento emitido por el Observable fuente y fusionando los resultados de los Observables obtenidos a partir de esta transformación.
+
+Su firma sería `concatMap(project: (value: T, index: number) => O, resultSelector: (outerValue: T, innerValue: ObservedValueOf<O>, outerIndex: number, innerIndex: number) => R): OperatorFunction<T, R>`
+
+Un buen ejemplo sería Realizar varias peticiones AJAX de forma secuencial. Hasta que cada petición no termine, no se realizará la siguiente
+
+```ts
+import { concatMap, map } from "rxjs/operators";
+import { of } from "rxjs";
+import { ajax } from "rxjs/ajax";
+
+const pokemonId$ = of(1, 5, 6);
+
+function getPokemonName(id: number) {
+  return ajax
+    .getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`)
+    .pipe(map(({ name }) => name));
+}
+
+pokemonId$.pipe(concatMap((id) => getPokemonName(id))).subscribe(console.log);
+// Salida: bulbasaur, charmeleon, charizard
+```
+
+Comparación entre mergeMap y concatMap
+
+concatMap esperará a que cada petición esté completa antes de realizar la siguiente. Esto implica que todas las peticiones se llevarán a cabo de forma consecutiva.
+
+mergeMap no esparará a que cada petición esté completa, sino que las realizará en paralelo. Esto implica que las peticiones NO se llevarán a cabo de forma consecutiva.
+
+```ts
+import { concatMap, mergeMap, map, delayWhen } from "rxjs/operators";
+import { of, interval } from "rxjs";
+import { ajax } from "rxjs/ajax";
+
+const pokemonId$ = of(1, 5, 6);
+
+function getRandomNumber() {
+  return Math.floor(Math.random() * 5) + 1;
+}
+
+function getPokemonName(id: number) {
+  return ajax.getJSON(`https://pokeapi.co/api/v2/pokemon/${id}`).pipe(
+    map(({ name }) => name),
+    // El resultado de cada petición se retrasará por un periodo aleatorio de tiempo. Esto se hace para poder observar que, al utilizar mergeMap, los resultados de las peticiones se emitirán en un orden aleatorio
+    delayWhen((_) => interval(getRandomNumber() * 1000))
+  );
+}
+
+pokemonId$.pipe(concatMap((id) => getPokemonName(id))).subscribe(console.log);
+// Salida: bulbasaur, charmeleon, charizard
+
+// Con mergeMap, el orden de los resultados será aleatorio
+pokemonId$.pipe(mergeMap((id) => getPokemonName(id))).subscribe(console.log);
+// Salida: charmeleon, bulbasaur, charizard
+```
+
+Para cada evento click, emitir los valores de 0 a 3 a intervalos de 1 segundo, sin concurrencia
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { concatMap, take } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(concatMap((ev) => interval(1000).pipe(take(4))));
+result.subscribe((x) => console.log(x));
+
+// Resulta en:
+// (los resultados no son concurrentes)
+// Por cada click en el documento, se emitirán los valores del 0 al 3 a intervales de 1000ms
+// (click) = 1000ms-> 0 -1000ms-> 1 -1000ms-> 2 -1000ms-> 3
+```
+
+### exhaustMap()
+El operador `exhaustMap()` Proyecta cada emisión de la fuente a un Observable interno que se fusiona con el Observable resultante únicamente si el Observable interno anterior se ha completado.
+Se debe utilizar exhaustMap si se quiere ignorar los Observables internos mientras no se haya completado el Observable interno anterior
+
+<img src="img/op-exhaustMap.png" width="auto;"/>
+
+Proyecta cada valor a un Observable interno, y 'aplasta' todos estos Observables internos mediante el operador `exhaust`.
+
+Retorna un Observable que aplica una función a cada uno de los elementos emitidos por el Observable fuente, donde dicha función retorna un Observable interno. Cuando se proyecta cada elemento de la fuente a un Observable, el Observable resultante comienza a emitir los elementos emitidos por el Observable interno. Sin embargo, exhaustMap ignora todos los Observables internos nuevos si el Observable interno anterior no se ha completado. Una vez se complete, exhaustMap se suscribirá y 'aplastará' el siguiente Observable interno y repetirá el proceso.
+
+
+La nomenclatura del operador sería `exhaustMap(project: (value: T, index: number) => any, resultSelector: (outerValue: T, innerValue: I, outerIndex: number, innerIndex: number) => R): OperatorFunction<T, R>` donde
+
+* **project:** Una función que, al aplicarse a un elemento emitido por el Observable fuente, retorna un Observable.
+
+* **resultSelector:** Opcional. El valor por defecto es `undefined`. Tipo: `number | ((outerValue: T, innerValue: ObservedValueOf, outerIndex: number, innerIndex: number) => R).`
+
+* **OperatorFunction<T, ObservedValueOf<O> | R>:**  Un Observable que emite el resultado de aplicar la función de proyección ( y el ya obsoleto `resultSelector` opcional) a cada elemento emitido por el Observable fuente y fusionando los resultados de los Observables obtenidos a partir de esta transformación.
+
+Su firma sería `exhaustMap(project: (value: T, index: number) => any, resultSelector: (outerValue: T, innerValue: I, outerIndex: number, innerIndex: number) => R): OperatorFunction<T, R>`
+
+Un buen ejemplo sería Obtener 3 películas de Studio Ghibli al hacer click en el botón
+
+Si hay alguna petición en curso, los clicks serán ignorados (cada petición tiene un retraso de 5s para poder observar este efecto.)
+
+```ts
+import { delay, exhaustMap, map, mergeAll, take } from "rxjs/operators";
+import { fromEvent } from "rxjs";
+import { ajax } from "rxjs/ajax";
+
+const click$ = fromEvent(document.getElementById("ghibliButton"), "click");
+
+function getGhibliFilms() {
+  return ajax.getJSON("https://ghibliapi.herokuapp.com/films").pipe(
+    delay(5000),
+    mergeAll(),
+    map(({ title }) => title),
+    take(3)
+  );
+}
+
+// Obtener 3 películas de Studio Ghibli al hacer click en el botón. Si hay alguna petición en curso, los clicks serán ignorados (cada petición tiene un retraso de 5s para poder observar este efecto.)
+click$.pipe(exhaustMap((_) => getGhibliFilms())).subscribe(console.log);
+// Salida: (Primer click) (click ignorado) (click ignorado) (5s) Castle in the Sky, Grave of the Fireflies, My Neighbor Totoro
+```
+
+Ejecuta un temporizador con cada click, únicamente si no hay ningún temporizador activo
+
+```ts
+import { fromEvent, interval } from "rxjs";
+import { exhaustMap, take } from "rxjs/operators";
+
+const clicks = fromEvent(document, "click");
+const result = clicks.pipe(exhaustMap((ev) => interval(1000).pipe(take(5))));
+result.subscribe((x) => console.log(x));
 ```
